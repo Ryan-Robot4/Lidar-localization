@@ -4,7 +4,7 @@ from ecal.msg.proto.core import Publisher as ProtobufPublisher
 import lidar_data_pb2 as lidar_pb
 from ecal.msg.common.core import ReceiveCallbackData
 import time
-from get_amalgames import Point, filtre_points, voisins, trouver_balises
+from get_amalgames import Point, filtre_points, voisins, trouver_balises, filtre_paquets
 
 class LidarWatcher:
     def __init__(self):
@@ -31,10 +31,12 @@ class LidarWatcher:
         ecal_core.finalize()
 
     def data_callback(self, pub_id : ecal_core.TopicId, data : ReceiveCallbackData[lidar_pb.Lidar]) -> None:
+        res=0.7 #resolution angulaire du lidar. par calcul je trouve 0.788 mais à vérifier.
         points=[Point(data.message.angles[i], data.message.distances[i], data.message.quality[i]) for i in range(len(data.message.distances))]
         points_propres=filtre_points(points)                       
         paquets=voisins(50,points_propres)
-        balises=trouver_balises(paquets)
+        paquets_filtres=filtre_paquets(paquets,res)
+        balises=trouver_balises(paquets_filtres)
         self.send_data_amal(paquets)
         if balises!=None:
             self.send_data_balises(balises)
@@ -62,4 +64,5 @@ class LidarWatcher:
 if __name__ == "__main__":
     with LidarWatcher() as lw:
         while ecal_core.ok():
+
             time.sleep(0.5)
